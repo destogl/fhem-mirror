@@ -18,17 +18,17 @@ use constant {
 
 
 my @rolls = (
-    { roll => "wohn.rollTerrR", dir=>"W", typ=>"n", temp=>"tempWohn",   tempS=>21, win=>"wohn.fenTerr", state=>STATE_IDLE, },
-    { roll => "wohn.rollTerrL", dir=>"W", typ=>"n", temp=>"tempWohn",   tempS=>21, win=>"",             state=>STATE_IDLE, },
-    { roll => "wohn.rollSofa",  dir=>"S", typ=>"n", temp=>"tempWohn",   tempS=>21, win=>"",             state=>STATE_IDLE, },
-    { roll => "ess.roll",       dir=>"S", typ=>"n", temp=>"tempWohn",   tempS=>21, win=>"",             state=>STATE_IDLE, },
-    { roll => "kuch.rollBar",   dir=>"S", typ=>"n", temp=>"tempKueche", tempS=>21, win=>"",             state=>STATE_IDLE, },
-    { roll => "kuch.rollStr",   dir=>"O", typ=>"n", temp=>"tempKueche", tempS=>21, win=>"",             state=>STATE_IDLE, },
-    { roll => "arb.rollTerr",   dir=>"W", typ=>"n", temp=>"tempStudio", tempS=>21, win=>"wohn.fenTerr", state=>STATE_IDLE, },
-    { roll => "arb.rollWeg",    dir=>"S", typ=>"n", temp=>"tempStudio", tempS=>21, win=>"",             state=>STATE_IDLE, },
-    { roll => "bad.roll",       dir=>"S", typ=>"n", temp=>"tempBad",    tempS=>23, win=>"",             state=>STATE_IDLE, },
-    { roll => "schlaf.rollWeg", dir=>"S", typ=>"s", temp=>"tempSchlaf", tempS=>18, win=>"",             state=>STATE_IDLE, },
-    { roll => "schlaf.rollStr", dir=>"O", typ=>"s", temp=>"tempSchlaf", tempS=>18, win=>"wohn.fenTerr", state=>STATE_IDLE, },
+    { roll => "wohn.rollTerrR", dir=>"W", typ=>"n", temp=>"tempWohn",   tempSoll=>21, tempSchalt=>-1, win=>"wohn.fenTerr", state=>STATE_IDLE, },
+    { roll => "wohn.rollTerrL", dir=>"W", typ=>"n", temp=>"tempWohn",   tempSoll=>21, tempSchalt=>-1, win=>"",             state=>STATE_IDLE, },
+    { roll => "wohn.rollSofa",  dir=>"S", typ=>"n", temp=>"tempWohn",   tempSoll=>21, tempSchalt=>-1, win=>"",             state=>STATE_IDLE, },
+    { roll => "ess.roll",       dir=>"S", typ=>"n", temp=>"tempWohn",   tempSoll=>21, tempSchalt=>-1, win=>"",             state=>STATE_IDLE, },
+    { roll => "kuch.rollBar",   dir=>"S", typ=>"n", temp=>"tempKueche", tempSoll=>21, tempSchalt=>-1, win=>"",             state=>STATE_IDLE, },
+    { roll => "kuch.rollStr",   dir=>"O", typ=>"n", temp=>"tempKueche", tempSoll=>21, tempSchalt=>-1, win=>"",             state=>STATE_IDLE, },
+    { roll => "arb.rollTerr",   dir=>"W", typ=>"n", temp=>"tempStudio", tempSoll=>21, tempSchalt=>-1, win=>"wohn.fenTerr", state=>STATE_IDLE, },
+    { roll => "arb.rollWeg",    dir=>"S", typ=>"n", temp=>"tempStudio", tempSoll=>21, tempSchalt=>-1, win=>"",             state=>STATE_IDLE, },
+    { roll => "bad.roll",       dir=>"S", typ=>"n", temp=>"tempBad",    tempSoll=>23, tempSchalt=>-1, win=>"",             state=>STATE_IDLE, },
+    { roll => "schlaf.rollWeg", dir=>"S", typ=>"s", temp=>"tempSchlaf", tempSoll=>18, tempSchalt=>-1, win=>"",             state=>STATE_IDLE, },
+    { roll => "schlaf.rollStr", dir=>"O", typ=>"s", temp=>"tempSchlaf", tempSoll=>18, tempSchalt=>-1, win=>"wohn.fenTerr", state=>STATE_IDLE, },
 );
 
 #my %rollStates = (
@@ -269,14 +269,14 @@ sub IsWetterSonneWait($)  {
 }
 
 sub RollCheck() {
-#    Dbg("RollCheck\n");
     my $temp=20;
     my $r;
     my $i=0;
     my $delay=11;
     my $tag=0;
 
-    my $tempOut=ReadingsVal("wetter", "temp_c", 99);
+    #my $tempOut=ReadingsVal("wetter", "temp_c", 99);
+    my $tempOut=ReadingsVal("naAussen", "temperature", 99);
 
     my $twil=Value("twil");
     if ($twil>=3 && $twil<10) { # civil
@@ -296,6 +296,7 @@ sub RollCheck() {
 
     # Nach wechsel von sonne auf !sonne blockert ? 
     my $sonneblock=IsWetterSonneWait($wett); 
+    Dbg("RollCheck to:$tempOut twil:$twil light:$light wett:$wett sr:$sr block:$sonneblock\n");
 
     for $r ( @rolls ) {
 
@@ -311,18 +312,26 @@ sub RollCheck() {
         # Raum zu warm und aussentemp hoch ?
         #$temp=ReadingsVal($r->{temp},"measured-temp", 99);
         $temp=ReadingsVal($r->{temp},"temperature", 99);
-	if( ($temp>$r->{tempS} && $tempOut>($r->{tempS}-3)) || $temp>($r->{tempS}+2) ) {
-	    $tempH=1;
-	}
-	if( $temp<$r->{tempS}-1 ) {
-	    $tempL=1;
+        my $tempSoll=$r->{tempSoll};
+        my $tempSchalt=$tempSoll;
+        my $tempHyst=99;
+        if($r->{tempSchalt}>-1) { 
+	    $tempSchalt=$r->{tempSchalt};
 	}
 
+	if( ($temp>$tempSoll && $tempOut>($tempSoll-3)) || $temp>($tempSoll+2) ) {
+	    $tempH=1;
+	}
+	if( $temp<$tempSoll-1 ) {
+	    $tempL=1;
+	}
+        
 	# Sonne scheint ins Fenster ?
         if($twil>=5 && $twil<7) { # nur, wenn der Sonnenstand ueber 'weather' liegt
 	    # bei hoher Raum- und Aussentemperatur immer unten lassen
-	    if($temp > ($r->{tempS}+2) && $tempOut > $r->{tempS}) { 
+	    if($temp > ($tempSchalt+2) && $tempOut > $tempSchalt) { 
 		$sonne=1;
+		$tempHyst=-0.5;
 	    }
 	    elsif (index($sr, $r->{dir}) != -1) { # Sonnenrichtung ins Fenster
 		if($sonneblock) {
@@ -351,7 +360,7 @@ sub RollCheck() {
             }
 	}
 
-        #Dbg("RollCheck:$r->{roll}-tempH:$tempH temp:$temp tempO:$tempOut so:$sonne wett:$wett sr:$sr twil:$twil tag:$tag fen:$fen skipR:$skipRunter skipH:$skipHoch st:$r->{state}");
+        Dbg("RollCheck:$r->{roll}-tempH:$tempH temp:$temp tempO:$tempOut so:$sonne wett:$wett sr:$sr twil:$twil tag:$tag fen:$fen skipR:$skipRunter skipH:$skipHoch st:$r->{state} h:$tempHyst ts:$tempSchalt");
 
 	if( $tag and $sonne and $tempH) {
             if($r->{state}!=STATE_SCHLITZ) {
@@ -364,6 +373,7 @@ sub RollCheck() {
 	
 	if(($tag && !$sonne)||($tag && $tempL)) {
             if($r->{state}!=STATE_HOCH) {
+		$tempHyst=0;
                 if(!$skipHoch) {
                     RollHoch($r->{roll}, $ndelay); 
 		    $r->{state}=STATE_HOCH;
@@ -379,6 +389,9 @@ sub RollCheck() {
                 $r->{state}=STATE_RUNTER;
 	    }
 	}
+	if($tempHyst<50) {
+	    $r->{tempSchalt}=$tempSoll+$tempHyst;
+        }
 	$i=$i+1;
     } # for
 }
