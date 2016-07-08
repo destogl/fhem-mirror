@@ -331,7 +331,7 @@ sub RollCheck() {
 	    # bei hoher Raum- und Aussentemperatur immer unten lassen
 	    if($temp > ($tempSchalt+2) && $tempOut > $tempSchalt) { 
 		$sonne=1;
-		$tempHyst=-0.5;
+		$tempHyst=-0.8;
 	    }
 	    elsif (index($sr, $r->{dir}) != -1) { # Sonnenrichtung ins Fenster
 		if($sonneblock) {
