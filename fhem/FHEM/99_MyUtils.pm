@@ -87,11 +87,17 @@ my @rollArb = (
 my $tc=0;
 my @blocktime=localtime;
 my $blocktimerRunning=0;
+my $tempHystOffset=-0.9;
+my $tempHighOffset=0.3;
+
+#------------------------------------------
 
 sub myfhem($) {
     #Log 1, "@_";
     fhem("@_");
 }
+
+#------------------------------------------
 
 sub RollCheckSkip($$)
 {
@@ -107,6 +113,8 @@ sub RollCheckSkip($$)
    return $skip
 }
 
+#------------------------------------------
+
 sub RollCmd($$$)
 {
     my ($cmd, $roll, $delay) = @_;
@@ -114,6 +122,8 @@ sub RollCmd($$$)
         myfhem ("define r".int(rand(10000))." at +".$delay." set ".$roll." ".$cmd);
     }
 }
+
+#------------------------------------------
      
 sub RollGroup(\@$$)
 {
@@ -147,9 +157,13 @@ sub RollGroup(\@$$)
     }
 }
 
+#------------------------------------------
+
 sub RollTest() {
      &RollGroup(\@rollTest, "closes", 1);
 }
+
+#------------------------------------------
 
 sub RollAll($$) {
 #   Log 1, "################";
@@ -164,6 +178,7 @@ sub RollAll($$) {
   }
 }
 
+#------------------------------------------
 
 sub RollWeck($) {
    my ($delay) = @_;
@@ -175,8 +190,12 @@ sub RollWeck($) {
 #------------------------------------------
 
 sub Dbg($) {
-    Log 1,$_[0];
+    if(Value("DebugRoll") eq "1") {
+	Log 1,$_[0];
+    }
 }
+
+#------------------------------------------
 
 sub RollRunterSchlitz($;$) {
     my ($roll, $delay) = @_;
@@ -193,6 +212,8 @@ sub RollRunterSchlitz($;$) {
     myfhem("define ru".$i." at +".$t2." set ".$roll." up 6");
 }
 
+#------------------------------------------
+
 sub RollHoch($;$) {
     my ($roll, $delay) = @_;
     $delay ||= 0; 
@@ -204,6 +225,8 @@ sub RollHoch($;$) {
     Dbg("RollChg: $roll - hoch($delay)\n");
     myfhem("define r".$i." at +".$t." set ".$roll." opens");
 }
+
+#------------------------------------------
 
 sub RollRunter($;$) {
     my ($roll, $delay) = @_;
@@ -217,6 +240,8 @@ sub RollRunter($;$) {
     myfhem("define r".$i." at +".$t." set ".$roll." closes");
 }
 
+#------------------------------------------
+
 sub IsSunny($) {
     my ($wett)=@_;
     if($wett==30 || $wett==31 || $wett==32 || $wett==33 || $wett==34 || $wett==35 || $wett==36) { # sonnig, heiter, heiss
@@ -224,6 +249,8 @@ sub IsSunny($) {
     }
     return(0);
 }
+
+#------------------------------------------
 
 sub IsLater($) {
     my($t)=@_;
@@ -236,7 +263,7 @@ sub IsLater($) {
     return(0);
 }
 
-
+#------------------------------------------
 
 # Nach dem Wechsel auf !sonne noch 2Std warten
 sub IsWetterSonneWait($)  {
@@ -267,6 +294,8 @@ sub IsWetterSonneWait($)  {
     }
     return(0);
 }
+
+#------------------------------------------
 
 sub RollCheck() {
     my $temp=20;
@@ -329,9 +358,9 @@ sub RollCheck() {
 	# Sonne scheint ins Fenster ?
         if($twil>=5 && $twil<7) { # nur, wenn der Sonnenstand ueber 'weather' liegt
 	    # bei hoher Raum- und Aussentemperatur immer unten lassen
-	    if($temp > ($tempSchalt+2) && $tempOut > $tempSchalt) { 
+	    if($temp > ($tempSchalt+$tempHighOffset) && $tempOut > $tempSoll) { 
 		$sonne=1;
-		$tempHyst=-0.8;
+		$tempHyst=$tempHystOffset;
 	    }
 	    elsif (index($sr, $r->{dir}) != -1) { # Sonnenrichtung ins Fenster
 		if($sonneblock) {
@@ -396,6 +425,7 @@ sub RollCheck() {
     } # for
 }
 
+#------------------------------------------
 
 sub Untoggle($) {
     my ($obj) = @_;
