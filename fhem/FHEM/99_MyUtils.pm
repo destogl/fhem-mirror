@@ -358,7 +358,7 @@ sub RollCheck() {
 	# Sonne scheint ins Fenster ?
         if($twil>=5 && $twil<7) { # nur, wenn der Sonnenstand ueber 'weather' liegt
 	    # bei hoher Raum- und Aussentemperatur immer unten lassen
-	    if($temp > ($tempSchalt+$tempHighOffset) && $tempOut > $tempSoll) { 
+	    if($temp > ($tempSchalt+$tempHighOffset) && $tempOut > $tempSoll+$tempHighOffset) { 
 		$sonne=1;
 		$tempHyst=$tempHystOffset;
 	    }
